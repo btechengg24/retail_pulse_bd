@@ -1,36 +1,26 @@
 package services
 
 import (
-	"encoding/csv"
-	"os"
+	"errors"
 	"RETAIL_PULSE_BD/models"
+	"sync"
 )
 
-var storeMaster map[string]models.Store
+var storeMaster = map[string]models.Store{
+	"S00339218": {"S00339218", "Store A", "12345"},
+	"S01408764": {"S01408764", "Store B", "67890"},
+}
 
-// LoadStoreMaster loads the store master data from a CSV file.
-func LoadStoreMaster(filePath string) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
+var storeMutex sync.RWMutex
+
+// GetStore retrieves a store by ID
+func GetStore(storeID string) (models.Store, error) {
+	storeMutex.RLock()
+	defer storeMutex.RUnlock()
+
+	store, exists := storeMaster[storeID]
+	if !exists {
+		return models.Store{}, errors.New("store not found")
 	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
-	if err != nil {
-		return err
-	}
-
-	storeMaster = make(map[string]models.Store)
-	for _, record := range records {
-		store := models.Store{
-			StoreID:   record[0],
-			StoreName: record[1],
-			AreaCode:  record[2],
-		}
-		storeMaster[store.StoreID] = store
-	}
-
-	return nil
+	return store, nil
 }

@@ -5,50 +5,59 @@ import (
 	"net/http"
 	"RETAIL_PULSE_BD/models"
 	"RETAIL_PULSE_BD/services"
+	"strconv"
 )
 
-// SubmitJobHandler handles job submission.
+// SubmitJobHandler handles job submission
 func SubmitJobHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse incoming JSON request
-	var request models.JobRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Check if count matches the number of visits
-	if request.Count != len(request.Visits) {
-		http.Error(w, "Mismatch in count and visit length", http.StatusBadRequest)
+	var jobRequest models.JobRequest
+	err := json.NewDecoder(r.Body).Decode(&jobRequest)
+	if err != nil || jobRequest.Count != len(jobRequest.Visits) {
+		http.Error(w, `{"error": "Invalid input"}`, http.StatusBadRequest)
 		return
 	}
 
-	// Generate job ID and create job
-	jobID := services.CreateJob(request)
+	// Generate and process the job
+	jobID := services.CreateJob(jobRequest)
 
-	// Respond with the job ID
-	response := map[string]interface{}{
-		"job_id": jobID,
-	}
-	w.WriteHeader(http.StatusCreated)
+	// Return the job ID in the response
+	response := map[string]interface{}{"job_id": jobID}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
-// GetJobStatusHandler handles retrieving the status of a job.
+// GetJobStatusHandler retrieves the status of a job
 func GetJobStatusHandler(w http.ResponseWriter, r *http.Request) {
-	jobID := r.URL.Query().Get("jobid")
-	if jobID == "" {
-		http.Error(w, "Job ID is required", http.StatusBadRequest)
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Fetch job status
+	// Extract job ID from query parameters
+	jobIDStr := r.URL.Query().Get("jobid")
+	jobID, err := strconv.Atoi(jobIDStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid job ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the job status
 	status, err := services.GetJobStatus(jobID)
 	if err != nil {
-		http.Error(w, "Job not found", http.StatusBadRequest)
+		http.Error(w, `{"error": "Job ID not found"}`, http.StatusBadRequest)
 		return
 	}
 
-	// Respond with job status
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(status)
+	// Return the job status
+	response := map[string]interface{}{
+		"job_id": jobID,
+		"status": status,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
