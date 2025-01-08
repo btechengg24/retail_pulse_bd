@@ -1,5 +1,6 @@
 # **Retail Pulse Backend Development Assignment**
 
+Hi
 
 ## **Description**
 This project is a backend service for managing job submissions and their statuses in a retail environment. The system processes store visit data and provides APIs to submit and retrieve the status of jobs. The data is validated against a master dataset of store information, ensuring that only valid stores are processed.
